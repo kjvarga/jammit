@@ -37,7 +37,29 @@ module Jammit
       raise DeprecationError, "Jammit 0.5+ no longer supports separate packages for templates.\nYou can include your JST alongside your JS, and use include_javascripts."
     end
 
+    # Return a list of paths for stylesheet asset(s)
+    def stylesheet_paths(*packages)
+      options = packages.extract_options!
+      return packages.map { |p| Jammit.packager.individual_urls(p.to_sym, :css) }.flatten! unless Jammit.package_assets
+      disabled = (options.delete(:embed_assets) == false) || (options.delete(:embed_images) == false)
+      return packages.map { |p| Jammit.asset_url(p, :css) }.flatten! if disabled || !Jammit.embed_assets
 
+      datauri_assets = packages.map { |p| Jammit.asset_url(p, :css, :datauri) }
+      ie_assets = Jammit.mhtml_enabled ? packages.map { |p| Jammit.asset_url(p, :css, :mhtml) } : packages.map { |p| Jammit.asset_url(p, :css) }
+      datauri_assets.concat(ie_assets).flatten!
+    end
+
+    # Return a list of paths for javascript asset(s)
+    def javascript_paths(*packages)
+      packages.map do |p| 
+        Jammit.package_assets ? Jammit.asset_url(p, :js) : Jammit.packager.individual_urls(p.to_sym, :js)
+      end.flatten!
+    end
+    
+    def template_paths(*packages)
+      packages.map { |p| Jammit.asset_url(p, :jst) }.flatten!
+    end  
+      
     private
 
     # HTML tags, in order, for all of the individual stylesheets.
